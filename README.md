@@ -34,7 +34,7 @@ A real-time 2D room lighting simulator that helps you plan and visualize light f
 - [Vite](https://vitejs.dev/) + [React](https://react.dev/) (JavaScript)
 - [Tailwind CSS v4](https://tailwindcss.com/) — dark-mode-first styling
 - [react-draggable](https://github.com/react-grid-layout/react-draggable) — fixture drag-and-drop
-- [framer-motion](https://www.framer.com/motion/) — UI animations
+- [html-to-image](https://github.com/bubkoo/html-to-image) — canvas PNG export
 - [lucide-react](https://lucide.dev/) — icons
 
 ## Getting Started

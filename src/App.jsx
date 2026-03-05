@@ -1,10 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Lightbulb } from 'lucide-react';
 import RoomSetup from './components/RoomSetup';
 import RoomCanvas from './components/RoomCanvas';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
+import SavedRooms from './components/SavedRooms';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { generateId } from './utils/lightUtils';
 
 const DEFAULT_ROOM = {
   name: 'My Room',
@@ -16,7 +18,9 @@ const DEFAULT_ROOM = {
 export default function App() {
   const [room, setRoom] = useLocalStorage('ll-room', null);
   const [lights, setLights] = useLocalStorage('ll-lights', []);
+  const [savedRooms, setSavedRooms] = useLocalStorage('ll-saved-rooms', []);
   const [selectedId, setSelectedId] = useState(null);
+  const canvasRef = useRef(null);
 
   const selectedLight = lights.find((l) => l.id === selectedId) || null;
 
@@ -34,6 +38,27 @@ export default function App() {
     setLights((prev) => prev.filter((l) => l.id !== id));
     setSelectedId(null);
   }, [setLights]);
+
+  const handleSaveRoom = useCallback(() => {
+    if (!room) return;
+    const entry = {
+      id: generateId(),
+      room,
+      lights,
+      savedAt: new Date().toISOString(),
+    };
+    setSavedRooms((prev) => [entry, ...prev]);
+  }, [room, lights, setSavedRooms]);
+
+  const handleLoadRoom = useCallback((savedEntry) => {
+    setRoom(savedEntry.room);
+    setLights(savedEntry.lights);
+    setSelectedId(null);
+  }, [setRoom, setLights]);
+
+  const handleDeleteSavedRoom = useCallback((id) => {
+    setSavedRooms((prev) => prev.filter((sr) => sr.id !== id));
+  }, [setSavedRooms]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -61,13 +86,29 @@ export default function App() {
                 <p className="text-gray-400 text-sm">Configure your room to start planning your lighting.</p>
               </div>
               <RoomSetup onGenerate={handleGenerate} initialRoom={DEFAULT_ROOM} />
+              {savedRooms.length > 0 && (
+                <div className="mt-6">
+                  <SavedRooms
+                    savedRooms={savedRooms}
+                    onSave={handleSaveRoom}
+                    onLoad={handleLoadRoom}
+                    onDelete={handleDeleteSavedRoom}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
             <div className="flex gap-6">
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
                 <RoomSetup onGenerate={handleGenerate} initialRoom={room} />
+                <SavedRooms
+                  savedRooms={savedRooms}
+                  onSave={handleSaveRoom}
+                  onLoad={handleLoadRoom}
+                  onDelete={handleDeleteSavedRoom}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <RoomCanvas
@@ -76,6 +117,7 @@ export default function App() {
                   setLights={setLights}
                   selectedLight={selectedId}
                   setSelectedLight={setSelectedId}
+                  canvasRef={canvasRef}
                 />
               </div>
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">

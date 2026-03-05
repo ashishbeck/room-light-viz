@@ -61,6 +61,16 @@ export const ROOM_TARGETS = {
   'Garage': 50,
 };
 
+// Recommended Kelvin temperature ranges per room type [min, max]
+export const ROOM_KELVIN_RANGES = {
+  'Living Room': [2700, 3000],
+  'Bedroom': [2700, 3000],
+  'Kitchen': [4000, 5000],
+  'Bathroom': [3000, 4000],
+  'Office': [4000, 5000],
+  'Garage': [4000, 5000],
+};
+
 export function getLightingStatus(density, targetDensity) {
   const ratio = density / targetDensity;
   if (ratio < 0.8) return 'under';

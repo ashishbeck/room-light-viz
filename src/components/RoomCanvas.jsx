@@ -1,12 +1,13 @@
 import { useCallback } from 'react';
+import { toPng } from 'html-to-image';
 import LightFixture from './LightFixture';
 import { generateId } from '../utils/lightUtils';
-import { Plus } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
 
 const MAX_WIDTH = 800;
 const MAX_HEIGHT = 520;
 
-export default function RoomCanvas({ room, lights, setLights, selectedLight, setSelectedLight }) {
+export default function RoomCanvas({ room, lights, setLights, selectedLight, setSelectedLight, canvasRef }) {
   const cellSize = Math.floor(Math.min(MAX_WIDTH / room.length, MAX_HEIGHT / room.width));
   const canvasWidth = cellSize * room.length;
   const canvasHeight = cellSize * room.width;
@@ -27,6 +28,20 @@ export default function RoomCanvas({ room, lights, setLights, selectedLight, set
     setLights((prev) => [...prev, newLight]);
     setSelectedLight(newLight.id);
   };
+
+  const handleExport = useCallback(async () => {
+    const node = canvasRef?.current;
+    if (!node) return;
+    try {
+      const dataUrl = await toPng(node, { backgroundColor: '#111827', pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = `${room.name.replace(/\s+/g, '-').toLowerCase() || 'room'}-layout.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Export failed', err);
+    }
+  }, [canvasRef, room.name]);
 
   const handleDragStop = useCallback((id, x, y) => {
     setLights((prev) =>
@@ -73,15 +88,26 @@ export default function RoomCanvas({ room, lights, setLights, selectedLight, set
           <h3 className="text-white font-semibold">{room.name}</h3>
           <p className="text-gray-400 text-xs">{room.length} ft × {room.width} ft · {room.type}</p>
         </div>
-        <button
-          onClick={handleAddLight}
-          className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Light
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium rounded-lg px-3 py-2 text-sm transition-colors"
+            title="Export canvas as PNG image"
+          >
+            <Download className="w-4 h-4" />
+            Export
+          </button>
+          <button
+            onClick={handleAddLight}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Light
+          </button>
+        </div>
       </div>
       <div
+        ref={canvasRef}
         className="relative border border-gray-700 rounded-xl overflow-hidden"
         style={{ width: canvasWidth, height: canvasHeight, background: '#111827', cursor: 'default' }}
         onClick={handleCanvasClick}

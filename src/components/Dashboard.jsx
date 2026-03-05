@@ -1,7 +1,7 @@
 import { BarChart3, Zap, Target, Thermometer } from 'lucide-react';
-import { ROOM_TARGETS, getLightingStatus, kelvinToHex } from '../utils/lightUtils';
+import { ROOM_TARGETS, ROOM_KELVIN_RANGES, getLightingStatus, kelvinToHex } from '../utils/lightUtils';
 
-function StatCard({ icon, label, value, unit, color = 'text-white' }) {
+function StatCard({ icon, label, value, unit, color = 'text-white', subValue }) {
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-2">
@@ -11,6 +11,7 @@ function StatCard({ icon, label, value, unit, color = 'text-white' }) {
       <div className={`text-2xl font-bold ${color}`}>
         {value}<span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>
       </div>
+      {subValue && <div className="text-xs text-gray-500 mt-1">{subValue}</div>}
     </div>
   );
 }
@@ -20,6 +21,8 @@ export default function Dashboard({ room, lights }) {
   const sqft = room.length * room.width;
   const density = sqft > 0 ? totalLumens / sqft : 0;
   const target = ROOM_TARGETS[room.type] || 20;
+  const targetTotalLumens = target * sqft;
+  const kelvinRange = ROOM_KELVIN_RANGES[room.type] || [2700, 5000];
   const status = lights.length > 0 ? getLightingStatus(density, target) : 'under';
   const ratio = target > 0 ? density / target : 0;
   const progressPct = Math.min(100, Math.round(ratio * 100));
@@ -35,6 +38,9 @@ export default function Dashboard({ room, lights }) {
   };
   const sc = statusConfig[status];
 
+  const kelvinRangeColor1 = kelvinToHex(kelvinRange[0]);
+  const kelvinRangeColor2 = kelvinToHex(kelvinRange[1]);
+
   return (
     <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full">
       <div className="flex items-center gap-2 mb-5">
@@ -49,6 +55,7 @@ export default function Dashboard({ room, lights }) {
           value={totalLumens.toLocaleString()}
           unit="lm"
           color="text-amber-400"
+          subValue={`Target: ${targetTotalLumens.toLocaleString()} lm`}
         />
         <StatCard
           icon={<Target className="w-4 h-4" />}
@@ -62,14 +69,35 @@ export default function Dashboard({ room, lights }) {
           value={density.toFixed(1)}
           unit="lm/ft²"
           color="text-purple-400"
+          subValue={`Target: ${target} lm/ft²`}
         />
-        <StatCard
-          icon={<Target className="w-4 h-4" />}
-          label="Target Density"
-          value={target}
-          unit="lm/ft²"
-          color="text-green-400"
-        />
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Thermometer className="w-4 h-4 text-gray-400" />
+            <span className="text-xs text-gray-400">Recommended Temp</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-lg font-bold"
+              style={{ color: kelvinRangeColor1 }}
+            >
+              {kelvinRange[0]}K
+            </span>
+            <span className="text-gray-600 text-sm">–</span>
+            <span
+              className="text-lg font-bold"
+              style={{ color: kelvinRangeColor2 }}
+            >
+              {kelvinRange[1]}K
+            </span>
+          </div>
+          <div
+            className="mt-2 h-2 rounded-full"
+            style={{
+              background: `linear-gradient(to right, ${kelvinRangeColor1}, ${kelvinRangeColor2})`,
+            }}
+          />
+        </div>
       </div>
 
       {avgKelvin > 0 && (
@@ -89,6 +117,9 @@ export default function Dashboard({ room, lights }) {
             <span className="text-xs text-gray-500">
               {avgKelvin < 3200 ? 'Warm' : avgKelvin < 4500 ? 'Neutral' : 'Cool'}
             </span>
+            <span className="text-xs text-gray-500 ml-auto">
+              Ideal: {kelvinRange[0]}–{kelvinRange[1]}K
+            </span>
           </div>
         </div>
       )}
@@ -106,7 +137,7 @@ export default function Dashboard({ room, lights }) {
         </div>
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>0%</span>
-          <span className="text-gray-400">{progressPct}% of target</span>
+          <span className="text-gray-400">{progressPct}% of target ({targetTotalLumens.toLocaleString()} lm)</span>
           <span>120%+</span>
         </div>
         <div className="flex gap-3 mt-3 text-xs flex-wrap" aria-label="Status legend">
