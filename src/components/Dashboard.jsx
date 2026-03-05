@@ -109,10 +109,19 @@ export default function Dashboard({ room, lights }) {
           <span className="text-gray-400">{progressPct}% of target</span>
           <span>120%+</span>
         </div>
-        <div className="flex gap-4 mt-3 text-xs">
-          <span className="text-blue-400">◀ Under-lit (&lt;80%)</span>
-          <span className="text-green-400">✓ Ideal (80–120%)</span>
-          <span className="text-orange-400">Over-lit (&gt;120%) ▶</span>
+        <div className="flex gap-3 mt-3 text-xs flex-wrap" aria-label="Status legend">
+          <span className="flex items-center gap-1 text-blue-400">
+            <span className="inline-block w-3 h-3 rounded-sm bg-blue-500" aria-hidden="true" />
+            [↓] Under-lit &lt;80%
+          </span>
+          <span className="flex items-center gap-1 text-green-400">
+            <span className="inline-block w-3 h-3 rounded-sm bg-green-500" aria-hidden="true" />
+            [✓] Ideal 80–120%
+          </span>
+          <span className="flex items-center gap-1 text-orange-400">
+            <span className="inline-block w-3 h-3 rounded-sm bg-orange-500" aria-hidden="true" />
+            [↑] Over-lit &gt;120%
+          </span>
         </div>
       </div>
     </div>
