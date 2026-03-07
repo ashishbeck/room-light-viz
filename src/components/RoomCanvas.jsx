@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { toPng } from 'html-to-image';
 import LightFixture from './LightFixture';
 import { generateId } from '../utils/lightUtils';
@@ -13,10 +13,17 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
   const canvasHeight = cellSize * room.width;
   const wrapperRef = useRef(null);
   const dragStartPositions = useRef(null);
+  const [marquee, setMarquee] = useState(null);
+  const marqueeStart = useRef(null);
+  const marqueeUsed = useRef(false);
+  const [isDraggingMarquee, setIsDraggingMarquee] = useState(false);
 
   const handleCanvasClick = useCallback((e) => {
     if (e.target === canvasRef?.current || e.target.closest('svg')) {
-      setSelectedIds([]);
+      if (!marqueeUsed.current) {
+        setSelectedIds([]);
+      }
+      marqueeUsed.current = false;
     }
   }, [setSelectedIds, canvasRef]);
 
@@ -154,6 +161,97 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
     setSelectedIds([]);
   }, [selectedIds, setLights, setSelectedIds]);
 
+  const handleMarqueeMouseDown = useCallback((e) => {
+    const canvas = canvasRef?.current;
+    if (!canvas) return;
+    // Only start marquee on the canvas background or SVG grid, not on light fixtures
+    if (e.target !== canvas && !e.target.closest('svg')) return;
+    // Don't start marquee on right-click
+    if (e.button !== 0) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const startX = e.clientX - rect.left;
+    const startY = e.clientY - rect.top;
+    marqueeStart.current = { x: startX, y: startY, additive: e.ctrlKey || e.metaKey };
+    marqueeUsed.current = false;
+    setIsDraggingMarquee(true);
+    setMarquee(null);
+  }, [canvasRef]);
+
+  const handleMarqueeMouseMove = useCallback((e) => {
+    if (!marqueeStart.current) return;
+    const canvas = canvasRef?.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const currentX = Math.max(0, Math.min(canvasWidth, e.clientX - rect.left));
+    const currentY = Math.max(0, Math.min(canvasHeight, e.clientY - rect.top));
+    const start = marqueeStart.current;
+
+    const x = Math.min(start.x, currentX);
+    const y = Math.min(start.y, currentY);
+    const w = Math.abs(currentX - start.x);
+    const h = Math.abs(currentY - start.y);
+
+    // Only show marquee if dragged at least 5px to avoid accidental selections
+    if (w > 5 || h > 5) {
+      setMarquee({ x, y, width: w, height: h });
+    }
+  }, [canvasRef, canvasWidth, canvasHeight]);
+
+  const handleMarqueeMouseUp = useCallback(() => {
+    if (!marqueeStart.current) return;
+    const additive = marqueeStart.current.additive;
+    marqueeStart.current = null;
+    setIsDraggingMarquee(false);
+
+    if (!marquee) {
+      // No rectangle drawn, just a click — let handleCanvasClick deal with it
+      setMarquee(null);
+      return;
+    }
+
+    // A marquee was drawn, mark it so handleCanvasClick doesn't clear selection
+    marqueeUsed.current = true;
+
+    // Find lights whose center falls within the marquee rectangle
+    const halfCell = cellSize / 2;
+    const insideIds = lights
+      .filter((l) => {
+        const cx = l.x + halfCell;
+        const cy = l.y + halfCell;
+        return (
+          cx >= marquee.x &&
+          cx <= marquee.x + marquee.width &&
+          cy >= marquee.y &&
+          cy <= marquee.y + marquee.height
+        );
+      })
+      .map((l) => l.id);
+
+    if (additive) {
+      // Add to existing selection (Ctrl/Cmd held)
+      setSelectedIds((prev) => [...new Set([...prev, ...insideIds])]);
+    } else {
+      setSelectedIds(insideIds);
+    }
+
+    setMarquee(null);
+  }, [marquee, lights, cellSize, setSelectedIds]);
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (marqueeStart.current) {
+        marqueeStart.current = null;
+        setIsDraggingMarquee(false);
+        setMarquee(null);
+      }
+    };
+    // Only needed for mouse released outside the canvas
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -263,14 +361,17 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
       {selectedIds.length > 0 && (
         <p className="text-xs text-gray-400">
           {selectedIds.length} light{selectedIds.length !== 1 ? 's' : ''} selected
-          <span className="text-gray-600 ml-2">· Ctrl/⌘+Click to multi-select · Ctrl+C/V to copy/paste · Delete to remove</span>
+          <span className="text-gray-600 ml-2">· Drag to select · Ctrl/⌘+Click to multi-select · Ctrl+C/V to copy/paste · Delete to remove</span>
         </p>
       )}
       <div
         ref={canvasRef}
         className="relative border border-gray-700 rounded-xl overflow-hidden"
-        style={{ width: canvasWidth, height: canvasHeight, background: '#111827', cursor: 'default' }}
+        style={{ width: canvasWidth, height: canvasHeight, background: '#111827', cursor: isDraggingMarquee ? 'crosshair' : 'default' }}
         onClick={handleCanvasClick}
+        onMouseDown={handleMarqueeMouseDown}
+        onMouseMove={handleMarqueeMouseMove}
+        onMouseUp={handleMarqueeMouseUp}
       >
         <svg
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
@@ -291,6 +392,21 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
             canvasHeight={canvasHeight}
           />
         ))}
+        {marquee && (
+          <div
+            style={{
+              position: 'absolute',
+              left: marquee.x,
+              top: marquee.y,
+              width: marquee.width,
+              height: marquee.height,
+              border: '1px solid rgba(245, 158, 11, 0.6)',
+              background: 'rgba(245, 158, 11, 0.1)',
+              pointerEvents: 'none',
+              zIndex: 30,
+            }}
+          />
+        )}
         {lights.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <p className="text-gray-600 text-sm">Click &quot;Add Light&quot; to place a fixture</p>
