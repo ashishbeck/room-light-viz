@@ -15,36 +15,77 @@ const DEFAULT_ROOM = {
   type: 'Living Room',
 };
 
+const MAX_UNDO = 50;
+
 export default function App() {
   const [room, setRoom] = useLocalStorage('ll-room', null);
   const [lights, setLights] = useLocalStorage('ll-lights', []);
   const [savedRooms, setSavedRooms] = useLocalStorage('ll-saved-rooms', []);
   const [selectedIds, setSelectedIds] = useState([]);
   const [clipboard, setClipboard] = useLocalStorage('ll-clipboard', []);
+  const [propertyClipboard, setPropertyClipboard] = useLocalStorage('ll-prop-clipboard', null);
   const canvasRef = useRef(null);
+  const undoStack = useRef([]);
+  const [undoCount, setUndoCount] = useState(0);
 
   const selectedLights = lights.filter((l) => selectedIds.includes(l.id));
   const selectedLight = selectedLights.length === 1 ? selectedLights[0] : null;
 
+  const pushUndo = useCallback((snapshot) => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), snapshot];
+    setUndoCount(undoStack.current.length);
+  }, []);
+
+  const setLightsWithUndo = useCallback((updater) => {
+    setLights((prev) => {
+      pushUndo(prev);
+      return updater instanceof Function ? updater(prev) : updater;
+    });
+  }, [setLights, pushUndo]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const prev = undoStack.current.pop();
+    setUndoCount(undoStack.current.length);
+    setLights(prev);
+    setSelectedIds([]);
+  }, [setLights]);
+
   const handleGenerate = useCallback((roomConfig) => {
     setRoom(roomConfig);
-    setLights([]);
+    setLightsWithUndo([]);
     setSelectedIds([]);
-  }, [setRoom, setLights]);
+  }, [setRoom, setLightsWithUndo]);
 
   const handleUpdateLight = useCallback((updated) => {
-    setLights((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-  }, [setLights]);
+    setLightsWithUndo((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+  }, [setLightsWithUndo]);
 
   const handleDeleteLight = useCallback((id) => {
-    setLights((prev) => prev.filter((l) => l.id !== id));
+    setLightsWithUndo((prev) => prev.filter((l) => l.id !== id));
     setSelectedIds((prev) => prev.filter((sid) => sid !== id));
-  }, [setLights]);
+  }, [setLightsWithUndo]);
 
   const handleDeleteSelected = useCallback(() => {
-    setLights((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+    setLightsWithUndo((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
     setSelectedIds([]);
-  }, [setLights, selectedIds]);
+  }, [setLightsWithUndo, selectedIds]);
+
+  const handleCopyProperties = useCallback(() => {
+    if (!selectedLight) return;
+    setPropertyClipboard({ lumens: selectedLight.lumens, kelvin: selectedLight.kelvin });
+  }, [selectedLight, setPropertyClipboard]);
+
+  const handlePasteProperties = useCallback(() => {
+    if (!propertyClipboard || selectedIds.length === 0) return;
+    setLightsWithUndo((prev) =>
+      prev.map((l) =>
+        selectedIds.includes(l.id)
+          ? { ...l, lumens: propertyClipboard.lumens, kelvin: propertyClipboard.kelvin }
+          : l
+      )
+    );
+  }, [propertyClipboard, selectedIds, setLightsWithUndo]);
 
   const handleSaveRoom = useCallback(() => {
     if (!room) return;
@@ -121,12 +162,14 @@ export default function App() {
                 <RoomCanvas
                   room={room}
                   lights={lights}
-                  setLights={setLights}
+                  setLights={setLightsWithUndo}
                   selectedIds={selectedIds}
                   setSelectedIds={setSelectedIds}
                   clipboard={clipboard}
                   setClipboard={setClipboard}
                   canvasRef={canvasRef}
+                  onUndo={handleUndo}
+                  undoCount={undoCount}
                 />
               </div>
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
@@ -136,6 +179,9 @@ export default function App() {
                   onUpdate={handleUpdateLight}
                   onDelete={handleDeleteLight}
                   onDeleteSelected={handleDeleteSelected}
+                  onCopyProperties={handleCopyProperties}
+                  onPasteProperties={handlePasteProperties}
+                  propertyClipboard={propertyClipboard}
                 />
               </div>
             </div>

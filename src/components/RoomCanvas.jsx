@@ -2,12 +2,12 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { toPng } from 'html-to-image';
 import LightFixture from './LightFixture';
 import { generateId } from '../utils/lightUtils';
-import { Plus, Download, Copy, Clipboard, MousePointerClick } from 'lucide-react';
+import { Plus, Download, Copy, Clipboard, MousePointerClick, Undo2 } from 'lucide-react';
 
 const MAX_WIDTH = 800;
 const MAX_HEIGHT = 520;
 
-export default function RoomCanvas({ room, lights, setLights, selectedIds, setSelectedIds, clipboard, setClipboard, canvasRef }) {
+export default function RoomCanvas({ room, lights, setLights, selectedIds, setSelectedIds, clipboard, setClipboard, canvasRef, onUndo, undoCount }) {
   const cellSize = Math.floor(Math.min(MAX_WIDTH / room.length, MAX_HEIGHT / room.width));
   const canvasWidth = cellSize * room.length;
   const canvasHeight = cellSize * room.width;
@@ -130,7 +130,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
 
   const handleCopy = useCallback(() => {
     if (selectedIds.length === 0) return;
-    const toCopy = lights.filter((l) => selectedIds.includes(l.id)).map(({ id, ...rest }) => rest);
+    const toCopy = lights.filter((l) => selectedIds.includes(l.id)).map(({ x, y, label, lumens, kelvin }) => ({ x, y, label, lumens, kelvin }));
     setClipboard(toCopy);
   }, [lights, selectedIds, setClipboard]);
 
@@ -268,6 +268,9 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
       } else if (isMod && e.key === 'a') {
         e.preventDefault();
         handleSelectAll();
+      } else if (isMod && e.key === 'z') {
+        e.preventDefault();
+        onUndo();
       } else if (e.key === 'Delete') {
         e.preventDefault();
         handleDeleteSelected();
@@ -276,7 +279,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
 
     el.addEventListener('keydown', handleKeyDown);
     return () => el.removeEventListener('keydown', handleKeyDown);
-  }, [handleCopy, handlePaste, handleSelectAll, handleDeleteSelected]);
+  }, [handleCopy, handlePaste, handleSelectAll, handleDeleteSelected, onUndo]);
 
   const gridLines = [];
   for (let x = 0; x <= room.length; x++) {
@@ -314,6 +317,15 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
           <p className="text-gray-400 text-xs">{room.length} ft × {room.width} ft · {room.type}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onUndo}
+            disabled={undoCount === 0}
+            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-gray-200 font-medium rounded-lg px-3 py-2 text-sm transition-colors"
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="w-4 h-4" />
+            Undo
+          </button>
           <button
             onClick={handleSelectAll}
             disabled={lights.length === 0}
@@ -361,7 +373,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
       {selectedIds.length > 0 && (
         <p className="text-xs text-gray-400">
           {selectedIds.length} light{selectedIds.length !== 1 ? 's' : ''} selected
-          <span className="text-gray-600 ml-2">· Drag to select · Ctrl/⌘+Click to multi-select · Ctrl+C/V to copy/paste · Delete to remove</span>
+          <span className="text-gray-600 ml-2">· Drag to select · Ctrl/⌘+Click to multi-select · Ctrl+C/V to copy/paste · Ctrl+Z to undo · Delete to remove</span>
         </p>
       )}
       <div
