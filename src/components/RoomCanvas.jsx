@@ -2,12 +2,12 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { toPng } from 'html-to-image';
 import LightFixture from './LightFixture';
 import { generateId } from '../utils/lightUtils';
-import { Plus, Download, Copy, Clipboard, MousePointerClick, Undo2 } from 'lucide-react';
+import { Plus, Download, Copy, Clipboard, MousePointerClick, Undo2, Redo2 } from 'lucide-react';
 
 const MAX_WIDTH = 800;
 const MAX_HEIGHT = 520;
 
-export default function RoomCanvas({ room, lights, setLights, selectedIds, setSelectedIds, clipboard, setClipboard, canvasRef, onUndo, undoCount }) {
+export default function RoomCanvas({ room, lights, setLights, setLightsWithUndo, pushUndoSnapshot, selectedIds, setSelectedIds, clipboard, setClipboard, canvasRef, onUndo, onRedo, undoCount, redoCount }) {
   const cellSize = Math.floor(Math.min(MAX_WIDTH / room.length, MAX_HEIGHT / room.width));
   const canvasWidth = cellSize * room.length;
   const canvasHeight = cellSize * room.width;
@@ -36,7 +36,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
       x: Math.floor(canvasWidth / 2 - cellSize / 2),
       y: Math.floor(canvasHeight / 2 - cellSize / 2),
     };
-    setLights((prev) => [...prev, newLight]);
+    setLightsWithUndo((prev) => [...prev, newLight]);
     setSelectedIds([newLight.id]);
   };
 
@@ -60,6 +60,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
   }), [canvasWidth, canvasHeight, cellSize]);
 
   const handleDragStart = useCallback((id) => {
+    pushUndoSnapshot();
     const positions = {};
     lights.forEach((l) => {
       if (selectedIds.includes(l.id)) {
@@ -67,7 +68,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
       }
     });
     dragStartPositions.current = { draggedId: id, positions };
-  }, [lights, selectedIds]);
+  }, [lights, selectedIds, pushUndoSnapshot]);
 
   const handleDrag = useCallback((id, x, y) => {
     const start = dragStartPositions.current;
@@ -147,9 +148,9 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
         y: clamped.y,
       };
     });
-    setLights((prev) => [...prev, ...newLights]);
+    setLightsWithUndo((prev) => [...prev, ...newLights]);
     setSelectedIds(newLights.map((l) => l.id));
-  }, [clipboard, setLights, setSelectedIds, clampPosition]);
+  }, [clipboard, setLightsWithUndo, setSelectedIds, clampPosition]);
 
   const handleSelectAll = useCallback(() => {
     setSelectedIds(lights.map((l) => l.id));
@@ -157,9 +158,9 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
 
   const handleDeleteSelected = useCallback(() => {
     if (selectedIds.length === 0) return;
-    setLights((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+    setLightsWithUndo((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
     setSelectedIds([]);
-  }, [selectedIds, setLights, setSelectedIds]);
+  }, [selectedIds, setLightsWithUndo, setSelectedIds]);
 
   const handleMarqueeMouseDown = useCallback((e) => {
     const canvas = canvasRef?.current;
@@ -268,9 +269,15 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
       } else if (isMod && e.key === 'a') {
         e.preventDefault();
         handleSelectAll();
+      } else if (isMod && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        onRedo();
       } else if (isMod && e.key === 'z') {
         e.preventDefault();
         onUndo();
+      } else if (isMod && e.key === 'y') {
+        e.preventDefault();
+        onRedo();
       } else if (e.key === 'Delete') {
         e.preventDefault();
         handleDeleteSelected();
@@ -279,7 +286,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
 
     el.addEventListener('keydown', handleKeyDown);
     return () => el.removeEventListener('keydown', handleKeyDown);
-  }, [handleCopy, handlePaste, handleSelectAll, handleDeleteSelected, onUndo]);
+  }, [handleCopy, handlePaste, handleSelectAll, handleDeleteSelected, onUndo, onRedo]);
 
   const gridLines = [];
   for (let x = 0; x <= room.length; x++) {
@@ -325,6 +332,15 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
           >
             <Undo2 className="w-4 h-4" />
             Undo
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={redoCount === 0}
+            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-gray-200 font-medium rounded-lg px-3 py-2 text-sm transition-colors"
+            title="Redo (Ctrl+Shift+Z / Ctrl+Y)"
+          >
+            <Redo2 className="w-4 h-4" />
+            Redo
           </button>
           <button
             onClick={handleSelectAll}
@@ -373,7 +389,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
       {selectedIds.length > 0 && (
         <p className="text-xs text-gray-400">
           {selectedIds.length} light{selectedIds.length !== 1 ? 's' : ''} selected
-          <span className="text-gray-600 ml-2">· Drag to select · Ctrl/⌘+Click to multi-select · Ctrl+C/V to copy/paste · Ctrl+Z to undo · Delete to remove</span>
+          <span className="text-gray-600 ml-2">· Drag to select · Ctrl/⌘+Click to multi-select · Ctrl+C/V to copy/paste · Ctrl+Z to undo · Ctrl+Shift+Z to redo · Delete to remove</span>
         </p>
       )}
       <div

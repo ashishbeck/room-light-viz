@@ -1,7 +1,7 @@
 import { Lightbulb, Trash2, Copy, ClipboardPaste } from 'lucide-react';
 import { kelvinToHex } from '../utils/lightUtils';
 
-export default function Sidebar({ light, selectedCount, onUpdate, onDelete, onDeleteSelected, onCopyProperties, onPasteProperties, propertyClipboard }) {
+export default function Sidebar({ light, selectedCount, onUpdate, onDelete, onDeleteSelected, onCopyProperties, onPasteProperties, propertyClipboard, pushUndoSnapshot }) {
   if (selectedCount > 1) {
     return (
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full">
@@ -72,6 +72,7 @@ export default function Sidebar({ light, selectedCount, onUpdate, onDelete, onDe
           <input
             type="text"
             value={light.label}
+            onFocus={pushUndoSnapshot}
             onChange={(e) => onUpdate({ ...light, label: e.target.value })}
             className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-400 transition-colors"
           />
@@ -88,6 +89,7 @@ export default function Sidebar({ light, selectedCount, onUpdate, onDelete, onDe
             max="5000"
             step="50"
             value={light.lumens}
+            onPointerDown={pushUndoSnapshot}
             onChange={(e) => onUpdate({ ...light, lumens: Number(e.target.value) })}
             className="w-full accent-amber-400"
           />
@@ -108,6 +110,7 @@ export default function Sidebar({ light, selectedCount, onUpdate, onDelete, onDe
             max="6500"
             step="100"
             value={light.kelvin}
+            onPointerDown={pushUndoSnapshot}
             onChange={(e) => onUpdate({ ...light, kelvin: Number(e.target.value) })}
             className="w-full"
             style={{ accentColor: colorHex }}

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Lightbulb } from 'lucide-react';
 import RoomSetup from './components/RoomSetup';
 import RoomCanvas from './components/RoomCanvas';
@@ -26,28 +26,49 @@ export default function App() {
   const [propertyClipboard, setPropertyClipboard] = useLocalStorage('ll-prop-clipboard', null);
   const canvasRef = useRef(null);
   const undoStack = useRef([]);
+  const redoStack = useRef([]);
   const [undoCount, setUndoCount] = useState(0);
+  const [redoCount, setRedoCount] = useState(0);
+  const lightsRef = useRef(lights);
+  useEffect(() => { lightsRef.current = lights; }, [lights]);
 
   const selectedLights = lights.filter((l) => selectedIds.includes(l.id));
   const selectedLight = selectedLights.length === 1 ? selectedLights[0] : null;
 
-  const pushUndo = useCallback((snapshot) => {
-    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), snapshot];
+  const pushUndoSnapshot = useCallback(() => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), [...lightsRef.current]];
+    redoStack.current = [];
     setUndoCount(undoStack.current.length);
+    setRedoCount(0);
   }, []);
 
   const setLightsWithUndo = useCallback((updater) => {
     setLights((prev) => {
-      pushUndo(prev);
+      undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), [...prev]];
+      redoStack.current = [];
+      setUndoCount(undoStack.current.length);
+      setRedoCount(0);
       return updater instanceof Function ? updater(prev) : updater;
     });
-  }, [setLights, pushUndo]);
+  }, [setLights]);
 
   const handleUndo = useCallback(() => {
     if (undoStack.current.length === 0) return;
     const prev = undoStack.current.pop();
+    redoStack.current.push([...lightsRef.current]);
     setUndoCount(undoStack.current.length);
+    setRedoCount(redoStack.current.length);
     setLights(prev);
+    setSelectedIds([]);
+  }, [setLights]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const next = redoStack.current.pop();
+    undoStack.current.push([...lightsRef.current]);
+    setUndoCount(undoStack.current.length);
+    setRedoCount(redoStack.current.length);
+    setLights(next);
     setSelectedIds([]);
   }, [setLights]);
 
@@ -58,8 +79,8 @@ export default function App() {
   }, [setRoom, setLightsWithUndo]);
 
   const handleUpdateLight = useCallback((updated) => {
-    setLightsWithUndo((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-  }, [setLightsWithUndo]);
+    setLights((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+  }, [setLights]);
 
   const handleDeleteLight = useCallback((id) => {
     setLightsWithUndo((prev) => prev.filter((l) => l.id !== id));
@@ -162,14 +183,18 @@ export default function App() {
                 <RoomCanvas
                   room={room}
                   lights={lights}
-                  setLights={setLightsWithUndo}
+                  setLights={setLights}
+                  setLightsWithUndo={setLightsWithUndo}
+                  pushUndoSnapshot={pushUndoSnapshot}
                   selectedIds={selectedIds}
                   setSelectedIds={setSelectedIds}
                   clipboard={clipboard}
                   setClipboard={setClipboard}
                   canvasRef={canvasRef}
                   onUndo={handleUndo}
+                  onRedo={handleRedo}
                   undoCount={undoCount}
+                  redoCount={redoCount}
                 />
               </div>
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
@@ -182,6 +207,7 @@ export default function App() {
                   onCopyProperties={handleCopyProperties}
                   onPasteProperties={handlePasteProperties}
                   propertyClipboard={propertyClipboard}
+                  pushUndoSnapshot={pushUndoSnapshot}
                 />
               </div>
             </div>
