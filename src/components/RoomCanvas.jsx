@@ -170,7 +170,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
       } else if (isMod && e.key === 'a') {
         e.preventDefault();
         handleSelectAll();
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      } else if (e.key === 'Delete') {
         e.preventDefault();
         handleDeleteSelected();
       }
@@ -209,7 +209,7 @@ export default function RoomCanvas({ room, lights, setLights, selectedIds, setSe
   }
 
   return (
-    <div className="flex flex-col gap-3" ref={wrapperRef} tabIndex={-1} style={{ outline: 'none' }}>
+    <div className="flex flex-col gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded-xl" ref={wrapperRef} tabIndex={-1}>
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-white font-semibold">{room.name}</h3>
