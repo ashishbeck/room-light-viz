@@ -19,15 +19,17 @@ export default function App() {
   const [room, setRoom] = useLocalStorage('ll-room', null);
   const [lights, setLights] = useLocalStorage('ll-lights', []);
   const [savedRooms, setSavedRooms] = useLocalStorage('ll-saved-rooms', []);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [clipboard, setClipboard] = useLocalStorage('ll-clipboard', []);
   const canvasRef = useRef(null);
 
-  const selectedLight = lights.find((l) => l.id === selectedId) || null;
+  const selectedLights = lights.filter((l) => selectedIds.includes(l.id));
+  const selectedLight = selectedLights.length === 1 ? selectedLights[0] : null;
 
   const handleGenerate = useCallback((roomConfig) => {
     setRoom(roomConfig);
     setLights([]);
-    setSelectedId(null);
+    setSelectedIds([]);
   }, [setRoom, setLights]);
 
   const handleUpdateLight = useCallback((updated) => {
@@ -36,8 +38,13 @@ export default function App() {
 
   const handleDeleteLight = useCallback((id) => {
     setLights((prev) => prev.filter((l) => l.id !== id));
-    setSelectedId(null);
+    setSelectedIds((prev) => prev.filter((sid) => sid !== id));
   }, [setLights]);
+
+  const handleDeleteSelected = useCallback(() => {
+    setLights((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+    setSelectedIds([]);
+  }, [setLights, selectedIds]);
 
   const handleSaveRoom = useCallback(() => {
     if (!room) return;
@@ -53,7 +60,7 @@ export default function App() {
   const handleLoadRoom = useCallback((savedEntry) => {
     setRoom(savedEntry.room);
     setLights(savedEntry.lights);
-    setSelectedId(null);
+    setSelectedIds([]);
   }, [setRoom, setLights]);
 
   const handleDeleteSavedRoom = useCallback((id) => {
@@ -115,16 +122,20 @@ export default function App() {
                   room={room}
                   lights={lights}
                   setLights={setLights}
-                  selectedLight={selectedId}
-                  setSelectedLight={setSelectedId}
+                  selectedIds={selectedIds}
+                  setSelectedIds={setSelectedIds}
+                  clipboard={clipboard}
+                  setClipboard={setClipboard}
                   canvasRef={canvasRef}
                 />
               </div>
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
                 <Sidebar
                   light={selectedLight}
+                  selectedCount={selectedIds.length}
                   onUpdate={handleUpdateLight}
                   onDelete={handleDeleteLight}
+                  onDeleteSelected={handleDeleteSelected}
                 />
               </div>
             </div>

@@ -1,7 +1,26 @@
 import { Lightbulb, Trash2 } from 'lucide-react';
 import { kelvinToHex } from '../utils/lightUtils';
 
-export default function Sidebar({ light, onUpdate, onDelete }) {
+export default function Sidebar({ light, selectedCount, onUpdate, onDelete, onDeleteSelected }) {
+  if (selectedCount > 1) {
+    return (
+      <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full">
+        <div className="flex items-center gap-2 mb-4">
+          <Lightbulb className="w-5 h-5 text-amber-400" />
+          <h2 className="text-lg font-semibold text-white">Multiple Selected</h2>
+        </div>
+        <p className="text-gray-400 text-sm mb-4">{selectedCount} lights selected. Use Ctrl/⌘+Click to adjust selection.</p>
+        <button
+          onClick={onDeleteSelected}
+          className="w-full flex items-center justify-center gap-2 border border-red-800 hover:border-red-600 text-red-400 hover:text-red-300 rounded-lg py-2 text-sm transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete All Selected
+        </button>
+      </div>
+    );
+  }
+
   if (!light) {
     return (
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full">
