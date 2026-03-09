@@ -2,7 +2,7 @@ import Draggable from 'react-draggable';
 import { useRef } from 'react';
 import { kelvinToRgbString, lumensToGlowSize } from '../utils/lightUtils';
 
-export default function LightFixture({ light, cellSize, isSelected, onSelect, onDragStop, canvasWidth, canvasHeight }) {
+export default function LightFixture({ light, cellSize, isSelected, onSelect, onDragStart, onDrag, onDragStop, canvasWidth, canvasHeight }) {
   const nodeRef = useRef(null);
   const color = kelvinToRgbString(light.kelvin);
   const glowSize = lumensToGlowSize(light.lumens, cellSize);
@@ -15,13 +15,21 @@ export default function LightFixture({ light, cellSize, isSelected, onSelect, on
     bottom: canvasHeight - cellSize,
   };
 
+  const handleStart = () => {
+    onDragStart(light.id);
+  };
+
+  const handleDrag = (e, data) => {
+    onDrag(light.id, data.x, data.y);
+  };
+
   const handleDragStop = (e, data) => {
     onDragStop(light.id, data.x, data.y);
   };
 
   const handleClick = (e) => {
     e.stopPropagation();
-    onSelect(light.id);
+    onSelect(light.id, e);
   };
 
   const { r, g, b } = (() => {
@@ -46,6 +54,8 @@ export default function LightFixture({ light, cellSize, isSelected, onSelect, on
     <Draggable
       nodeRef={nodeRef}
       position={{ x: light.x, y: light.y }}
+      onStart={handleStart}
+      onDrag={handleDrag}
       onStop={handleDragStop}
       bounds={bounds}
     >

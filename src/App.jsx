@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Lightbulb } from 'lucide-react';
 import RoomSetup from './components/RoomSetup';
 import RoomCanvas from './components/RoomCanvas';
@@ -15,29 +15,98 @@ const DEFAULT_ROOM = {
   type: 'Living Room',
 };
 
+const MAX_UNDO = 50;
+
 export default function App() {
   const [room, setRoom] = useLocalStorage('ll-room', null);
   const [lights, setLights] = useLocalStorage('ll-lights', []);
   const [savedRooms, setSavedRooms] = useLocalStorage('ll-saved-rooms', []);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [clipboard, setClipboard] = useLocalStorage('ll-clipboard', []);
+  const [propertyClipboard, setPropertyClipboard] = useLocalStorage('ll-prop-clipboard', null);
   const canvasRef = useRef(null);
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
+  const [undoCount, setUndoCount] = useState(0);
+  const [redoCount, setRedoCount] = useState(0);
+  const lightsRef = useRef(lights);
+  useEffect(() => { lightsRef.current = lights; }, [lights]);
 
-  const selectedLight = lights.find((l) => l.id === selectedId) || null;
+  const selectedLights = lights.filter((l) => selectedIds.includes(l.id));
+  const selectedLight = selectedLights.length === 1 ? selectedLights[0] : null;
+
+  const pushUndoSnapshot = useCallback(() => {
+    undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), [...lightsRef.current]];
+    redoStack.current = [];
+    setUndoCount(undoStack.current.length);
+    setRedoCount(0);
+  }, []);
+
+  const setLightsWithUndo = useCallback((updater) => {
+    setLights((prev) => {
+      undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), [...prev]];
+      redoStack.current = [];
+      setUndoCount(undoStack.current.length);
+      setRedoCount(0);
+      return updater instanceof Function ? updater(prev) : updater;
+    });
+  }, [setLights]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const prev = undoStack.current.pop();
+    redoStack.current.push([...lightsRef.current]);
+    setUndoCount(undoStack.current.length);
+    setRedoCount(redoStack.current.length);
+    setLights(prev);
+    setSelectedIds([]);
+  }, [setLights]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const next = redoStack.current.pop();
+    undoStack.current.push([...lightsRef.current]);
+    setUndoCount(undoStack.current.length);
+    setRedoCount(redoStack.current.length);
+    setLights(next);
+    setSelectedIds([]);
+  }, [setLights]);
 
   const handleGenerate = useCallback((roomConfig) => {
     setRoom(roomConfig);
-    setLights([]);
-    setSelectedId(null);
-  }, [setRoom, setLights]);
+    setLightsWithUndo([]);
+    setSelectedIds([]);
+  }, [setRoom, setLightsWithUndo]);
 
   const handleUpdateLight = useCallback((updated) => {
     setLights((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
   }, [setLights]);
 
   const handleDeleteLight = useCallback((id) => {
-    setLights((prev) => prev.filter((l) => l.id !== id));
-    setSelectedId(null);
-  }, [setLights]);
+    setLightsWithUndo((prev) => prev.filter((l) => l.id !== id));
+    setSelectedIds((prev) => prev.filter((sid) => sid !== id));
+  }, [setLightsWithUndo]);
+
+  const handleDeleteSelected = useCallback(() => {
+    setLightsWithUndo((prev) => prev.filter((l) => !selectedIds.includes(l.id)));
+    setSelectedIds([]);
+  }, [setLightsWithUndo, selectedIds]);
+
+  const handleCopyProperties = useCallback(() => {
+    if (!selectedLight) return;
+    setPropertyClipboard({ lumens: selectedLight.lumens, kelvin: selectedLight.kelvin });
+  }, [selectedLight, setPropertyClipboard]);
+
+  const handlePasteProperties = useCallback(() => {
+    if (!propertyClipboard || selectedIds.length === 0) return;
+    setLightsWithUndo((prev) =>
+      prev.map((l) =>
+        selectedIds.includes(l.id)
+          ? { ...l, lumens: propertyClipboard.lumens, kelvin: propertyClipboard.kelvin }
+          : l
+      )
+    );
+  }, [propertyClipboard, selectedIds, setLightsWithUndo]);
 
   const handleSaveRoom = useCallback(() => {
     if (!room) return;
@@ -53,7 +122,7 @@ export default function App() {
   const handleLoadRoom = useCallback((savedEntry) => {
     setRoom(savedEntry.room);
     setLights(savedEntry.lights);
-    setSelectedId(null);
+    setSelectedIds([]);
   }, [setRoom, setLights]);
 
   const handleDeleteSavedRoom = useCallback((id) => {
@@ -115,16 +184,30 @@ export default function App() {
                   room={room}
                   lights={lights}
                   setLights={setLights}
-                  selectedLight={selectedId}
-                  setSelectedLight={setSelectedId}
+                  setLightsWithUndo={setLightsWithUndo}
+                  pushUndoSnapshot={pushUndoSnapshot}
+                  selectedIds={selectedIds}
+                  setSelectedIds={setSelectedIds}
+                  clipboard={clipboard}
+                  setClipboard={setClipboard}
                   canvasRef={canvasRef}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  undoCount={undoCount}
+                  redoCount={redoCount}
                 />
               </div>
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
                 <Sidebar
                   light={selectedLight}
+                  selectedCount={selectedIds.length}
                   onUpdate={handleUpdateLight}
                   onDelete={handleDeleteLight}
+                  onDeleteSelected={handleDeleteSelected}
+                  onCopyProperties={handleCopyProperties}
+                  onPasteProperties={handlePasteProperties}
+                  propertyClipboard={propertyClipboard}
+                  pushUndoSnapshot={pushUndoSnapshot}
                 />
               </div>
             </div>
