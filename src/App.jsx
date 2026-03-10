@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, ChevronDown } from 'lucide-react';
 import RoomSetup from './components/RoomSetup';
 import RoomCanvas from './components/RoomCanvas';
 import Sidebar from './components/Sidebar';
@@ -24,6 +24,7 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [clipboard, setClipboard] = useLocalStorage('ll-clipboard', []);
   const [propertyClipboard, setPropertyClipboard] = useLocalStorage('ll-prop-clipboard', null);
+  const [isRoomSetupOpen, setIsRoomSetupOpen] = useState(false);
   const canvasRef = useRef(null);
   const undoStack = useRef([]);
   const redoStack = useRef([]);
@@ -178,7 +179,24 @@ export default function App() {
             />
             <div className="flex gap-6">
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
-                <RoomSetup onGenerate={handleGenerate} initialRoom={room} />
+                <div className="w-full">
+                  <button
+                    id="room-setup-toggle"
+                    type="button"
+                    onClick={() => setIsRoomSetupOpen((prev) => !prev)}
+                    aria-expanded={isRoomSetupOpen}
+                    aria-controls="room-setup-panel"
+                    className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white bg-gray-900 border border-gray-700 rounded-xl hover:bg-gray-800/50 transition-colors"
+                  >
+                    Room Setup
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-gray-400 transition-transform ${isRoomSetupOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isRoomSetupOpen && (
+                    <div id="room-setup-panel" role="region" aria-labelledby="room-setup-toggle">
+                      <RoomSetup onGenerate={handleGenerate} initialRoom={room} />
+                    </div>
+                  )}
+                </div>
                 <Sidebar
                   light={selectedLight}
                   selectedCount={selectedIds.length}
@@ -209,7 +227,7 @@ export default function App() {
                   redoCount={redoCount}
                 />
               </div>
-              <div className="flex-shrink-0 w-64 flex flex-col gap-4">
+              <div className="flex-shrink-0 w-80 flex flex-col gap-4">
                 <Dashboard room={room} lights={lights} />
               </div>
             </div>
