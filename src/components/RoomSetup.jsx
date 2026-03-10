@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Home, Ruler, ChevronDown } from 'lucide-react';
 
-const ROOM_TYPES = ['Living Room', 'Bedroom', 'Kitchen', 'Bathroom', 'Office', 'Garage'];
+const ROOM_TYPES = ['Living Room', 'Bedroom', 'Kitchen', 'Dining', 'Bathroom', 'Office', 'Garage', 'Portico'];
 
 export default function RoomSetup({ onGenerate, initialRoom }) {
   const [roomName, setRoomName] = useState(initialRoom?.name || '');

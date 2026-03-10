@@ -53,22 +53,26 @@ export function lumensToGlowSize(lumens, cellSize) {
 }
 
 export const ROOM_TARGETS = {
-  'Living Room': 20,
+  'Living Room': 30,
   'Bedroom': 20,
-  'Kitchen': 50,
+  'Kitchen': 40,
+  'Dining': 30,
   'Bathroom': 70,
-  'Office': 50,
-  'Garage': 50,
+  'Office': 40,
+  'Garage': 30,
+  'Portico': 10,
 };
 
 // Recommended Kelvin temperature ranges per room type [min, max]
 export const ROOM_KELVIN_RANGES = {
-  'Living Room': [2700, 3000],
+  'Living Room': [3000, 3500],
   'Bedroom': [2700, 3000],
-  'Kitchen': [4000, 5000],
-  'Bathroom': [3000, 4000],
-  'Office': [4000, 5000],
-  'Garage': [4000, 5000],
+  'Kitchen': [3500, 4000],
+  'Dining': [2700, 3000],
+  'Bathroom': [3500, 4000],
+  'Office': [3500, 4000],
+  'Garage': [5000, 6000],
+  'Portico': [2700, 3000],
 };
 
 export function getLightingStatus(density, targetDensity) {
