@@ -179,6 +179,17 @@ export default function App() {
             <div className="flex gap-6">
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
                 <RoomSetup onGenerate={handleGenerate} initialRoom={room} />
+                <Sidebar
+                  light={selectedLight}
+                  selectedCount={selectedIds.length}
+                  onUpdate={handleUpdateLight}
+                  onDelete={handleDeleteLight}
+                  onDeleteSelected={handleDeleteSelected}
+                  onCopyProperties={handleCopyProperties}
+                  onPasteProperties={handlePasteProperties}
+                  propertyClipboard={propertyClipboard}
+                  pushUndoSnapshot={pushUndoSnapshot}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <RoomCanvas
@@ -199,20 +210,9 @@ export default function App() {
                 />
               </div>
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
-                <Sidebar
-                  light={selectedLight}
-                  selectedCount={selectedIds.length}
-                  onUpdate={handleUpdateLight}
-                  onDelete={handleDeleteLight}
-                  onDeleteSelected={handleDeleteSelected}
-                  onCopyProperties={handleCopyProperties}
-                  onPasteProperties={handlePasteProperties}
-                  propertyClipboard={propertyClipboard}
-                  pushUndoSnapshot={pushUndoSnapshot}
-                />
+                <Dashboard room={room} lights={lights} />
               </div>
             </div>
-            <Dashboard room={room} lights={lights} />
           </div>
         )}
       </main>
