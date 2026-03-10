@@ -162,6 +162,7 @@ export default function App() {
                     onSave={handleSaveRoom}
                     onLoad={handleLoadRoom}
                     onDelete={handleDeleteSavedRoom}
+                    layout="vertical"
                   />
                 </div>
               )}
@@ -169,15 +170,15 @@ export default function App() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
+            <SavedRooms
+              savedRooms={savedRooms}
+              onSave={handleSaveRoom}
+              onLoad={handleLoadRoom}
+              onDelete={handleDeleteSavedRoom}
+            />
             <div className="flex gap-6">
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
                 <RoomSetup onGenerate={handleGenerate} initialRoom={room} />
-                <SavedRooms
-                  savedRooms={savedRooms}
-                  onSave={handleSaveRoom}
-                  onLoad={handleLoadRoom}
-                  onDelete={handleDeleteSavedRoom}
-                />
               </div>
               <div className="flex-1 min-w-0">
                 <RoomCanvas

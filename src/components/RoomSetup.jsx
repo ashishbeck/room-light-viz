@@ -11,10 +11,13 @@ export default function RoomSetup({ onGenerate, initialRoom }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const l = Number(length);
+    const w = Number(width);
+    if (!l || l <= 0 || !w || w <= 0) return;
     onGenerate({
       name: roomName || 'My Room',
-      length: Number(length),
-      width: Number(width),
+      length: l,
+      width: w,
       type: roomType,
     });
   };
@@ -43,7 +46,7 @@ export default function RoomSetup({ onGenerate, initialRoom }) {
             </label>
             <input
               type="number"
-              min="5"
+              step="any"
               max="100"
               value={length}
               onChange={(e) => setLength(e.target.value)}
@@ -56,7 +59,7 @@ export default function RoomSetup({ onGenerate, initialRoom }) {
             </label>
             <input
               type="number"
-              min="5"
+              step="any"
               max="100"
               value={width}
               onChange={(e) => setWidth(e.target.value)}
