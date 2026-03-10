@@ -11,10 +11,13 @@ export default function RoomSetup({ onGenerate, initialRoom }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const l = Number(length);
+    const w = Number(width);
+    if (!l || l <= 0 || !w || w <= 0) return;
     onGenerate({
       name: roomName || 'My Room',
-      length: Number(length),
-      width: Number(width),
+      length: l,
+      width: w,
       type: roomType,
     });
   };
