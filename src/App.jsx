@@ -181,15 +181,20 @@ export default function App() {
               <div className="flex-shrink-0 w-64 flex flex-col gap-4">
                 <div className="w-full">
                   <button
+                    id="room-setup-toggle"
                     type="button"
                     onClick={() => setIsRoomSetupOpen((prev) => !prev)}
+                    aria-expanded={isRoomSetupOpen}
+                    aria-controls="room-setup-panel"
                     className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white bg-gray-900 border border-gray-700 rounded-xl hover:bg-gray-800/50 transition-colors"
                   >
                     Room Setup
-                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isRoomSetupOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown aria-hidden="true" className={`w-4 h-4 text-gray-400 transition-transform ${isRoomSetupOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isRoomSetupOpen && (
-                    <RoomSetup onGenerate={handleGenerate} initialRoom={room} />
+                    <div id="room-setup-panel" role="region" aria-labelledby="room-setup-toggle">
+                      <RoomSetup onGenerate={handleGenerate} initialRoom={room} />
+                    </div>
                   )}
                 </div>
                 <Sidebar
