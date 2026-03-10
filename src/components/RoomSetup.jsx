@@ -43,7 +43,7 @@ export default function RoomSetup({ onGenerate, initialRoom }) {
             </label>
             <input
               type="number"
-              min="5"
+              step="any"
               max="100"
               value={length}
               onChange={(e) => setLength(e.target.value)}
@@ -56,7 +56,7 @@ export default function RoomSetup({ onGenerate, initialRoom }) {
             </label>
             <input
               type="number"
-              min="5"
+              step="any"
               max="100"
               value={width}
               onChange={(e) => setWidth(e.target.value)}
